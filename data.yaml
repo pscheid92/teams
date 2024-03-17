@@ -1,0 +1,10 @@
+teams:
+# team-1:
+#   - user1
+#   - user2
+
+users:
+# - name: user1
+#   key: ...
+# - name: user2
+#   key: ...

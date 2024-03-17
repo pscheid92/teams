@@ -1,0 +1,8 @@
+jwt:
+  issuer: teams-server
+  audience: teams-server
+  leeway: 5s
+  secret: i-am-not-secure
+
+data:
+  path: data.yaml
