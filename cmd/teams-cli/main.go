@@ -24,7 +24,7 @@ func buildRootCmd() *cobra.Command {
 		TraverseChildren: true,
 	}
 
-	command.PersistentFlags().String("server", "http://localhost:8080/", "...usage...")
+	command.PersistentFlags().String("server", "https://patrickscheid.de/teams/", "...usage...")
 
 	directory := getAppDir()
 	repository := internal.NewFSKeyRepository(directory)
