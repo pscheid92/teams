@@ -1,0 +1,9 @@
+server: https://some-server.de/api
+
+users:
+  user1@email.com:
+    public: IW+i9siGVkf+sCZAUU2ULIf/90CZAUU2ULIf/COuTfRDSr1dg=
+    private: 8VRwbJqxX/1NoSArxszMe9CZAUU2ULIf/HmEQCZAUU2ULIf/2yIZWR/6wJkBRTZQsh//3Ru3Ud8I65N9ENKvV2A==
+  user2@email.com:
+    public: yoe7VJRArFstOeHyleU26+6nkURsCsIdJ7sJKo4Jw=
+    private: 4n5XWC9KlnqMmasCI7Y6nkURsCsD9WZ6+Pq1W+IJkPKh7tUlECsWy054fKV5Tbr4+rVb4gmTVch0nuwkqjgnA==

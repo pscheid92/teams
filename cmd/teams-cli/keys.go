@@ -5,31 +5,61 @@ import (
 	"github.com/pscheid/teams/internal"
 	"github.com/spf13/cobra"
 	"log"
+	"slices"
 )
 
-func buildKeysCmd(repository internal.KeysRepository) *cobra.Command {
-	command := &cobra.Command{Use: "keys"}
-
+func buildKeysCmd() *cobra.Command {
+	command := &cobra.Command{
+		Use:   "keys",
+		Short: "Manage your local keys",
+	}
 	command.AddCommand(
-		buildListKeysCmd(repository),
-		buildGenerateKeyCmd(repository),
-		buildDeleteKeyCmd(repository),
-		buildShowPublicKeyCmd(repository),
-		buildShowPrivateKeyCmd(repository),
+		buildGenerateKeyCmd(),
+		buildListKeysCmd(),
+		buildShowPublicKeyCmd(),
+		buildShowPrivateKeyCmd(),
 	)
-
 	return command
 }
 
-func buildListKeysCmd(repository internal.KeysRepository) *cobra.Command {
+func buildGenerateKeyCmd() *cobra.Command {
 	return &cobra.Command{
-		Use: "list",
+		Use:   "generate",
+		Short: "Generate a new public and private key pais",
+		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			users, err := repository.ListUsers()
+			username := args[0]
+
+			keys, err := internal.GenerateKeys()
 			if err != nil {
 				log.Fatalln(err)
 			}
 
+			template := `add this to your local configuration file
+
+  %s:
+    public: %s
+    private: %s
+
+`
+			fmt.Printf(template, username, keys.Public, keys.Private)
+		},
+	}
+}
+
+func buildListKeysCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "list",
+		Short: "List you configured users",
+		Run: func(cmd *cobra.Command, args []string) {
+			app := cmd.Context().Value("app").(*AppContext)
+			keysSet, err := app.BuildKeysSet()
+			if err != nil {
+				log.Fatalln(err)
+			}
+
+			users := keysSet.ListUsers()
+			slices.Sort(users)
 			for _, user := range users {
 				fmt.Println(user)
 			}
@@ -37,70 +67,50 @@ func buildListKeysCmd(repository internal.KeysRepository) *cobra.Command {
 	}
 }
 
-func buildGenerateKeyCmd(repository internal.KeysRepository) *cobra.Command {
+func buildShowPrivateKeyCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:  "generate",
-		Args: cobra.ExactArgs(1),
+		Use:   "private",
+		Short: "Show private key of user",
+		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			username := args[0]
+			app := cmd.Context().Value("app").(*AppContext)
 
-			public, _, err := repository.GenerateKeys(username)
+			keysSet, err := app.BuildKeysSet()
 			if err != nil {
 				log.Fatalln(err)
 			}
 
-			fmt.Println(public)
+			key, ok := keysSet.GetKeys(username)
+			if !ok {
+				log.Fatalln("unknown username")
+			}
+
+			fmt.Println(key.Private)
 		},
 	}
 }
 
-func buildDeleteKeyCmd(repository internal.KeysRepository) *cobra.Command {
+func buildShowPublicKeyCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:  "delete",
-		Args: cobra.ExactArgs(1),
+		Use:   "public",
+		Short: "Show public key of user",
+		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			username := args[0]
+			app := cmd.Context().Value("app").(*AppContext)
 
-			err := repository.DeleteKeys(username)
+			keysSet, err := app.BuildKeysSet()
 			if err != nil {
 				log.Fatalln(err)
 			}
 
-			fmt.Println("success")
-		},
-	}
-}
-
-func buildShowPrivateKeyCmd(repository internal.KeysRepository) *cobra.Command {
-	return &cobra.Command{
-		Use:  "private",
-		Args: cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			username := args[0]
-
-			key, err := repository.LoadEncodedPrivateKey(username)
-			if err != nil {
-				log.Fatalln(err)
+			key, ok := keysSet.GetKeys(username)
+			if !ok {
+				log.Fatalln("unknown username")
 			}
 
-			fmt.Println(key)
-		},
-	}
-}
-
-func buildShowPublicKeyCmd(repository internal.KeysRepository) *cobra.Command {
-	return &cobra.Command{
-		Use:  "public",
-		Args: cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			username := args[0]
-
-			key, err := repository.LoadEncodedPublicKey(username)
-			if err != nil {
-				log.Fatalln(err)
-			}
-
-			fmt.Println(key)
+			fmt.Println(key.Public)
 		},
 	}
 }

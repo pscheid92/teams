@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"github.com/pscheid/teams/internal"
 	"github.com/spf13/cobra"
@@ -8,20 +9,29 @@ import (
 	"time"
 )
 
-func buildLoginCmd(repository internal.KeysRepository, client *internal.Client) *cobra.Command {
+func buildLoginCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:  "login",
-		Args: cobra.ExactArgs(1),
+		Use:   "login",
+		Short: "Obtain an OAuth token",
+		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			username := args[0]
+			app := cmd.Context().Value("app").(*AppContext)
 
-			server, err := cmd.Flags().GetString("server")
+			keysSet, err := app.BuildKeysSet()
 			if err != nil {
 				log.Fatalln(err)
 			}
-			client := internal.NewClient(server)
 
-			key, err := repository.LoadPrivateKey(username)
+			client, err := app.BuildClient()
+			if err != nil {
+				log.Fatalln(err)
+			}
+
+			key, err := keysSet.GetPrivateKey(username)
+			if errors.Is(err, internal.ErrKeysNotFound) {
+				log.Fatalln("unknown username")
+			}
 			if err != nil {
 				log.Fatalln(err)
 			}
@@ -45,12 +55,19 @@ func buildLoginCmd(repository internal.KeysRepository, client *internal.Client) 
 	}
 }
 
-func buildVerifyCmd(client *internal.Client) *cobra.Command {
+func buildVerifyCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:  "verify",
-		Args: cobra.ExactArgs(1),
+		Use:   "verify",
+		Short: "Verify if a provided OAuth token is still valid",
+		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			accessToken := args[0]
+			app := cmd.Context().Value("app").(*AppContext)
+
+			client, err := app.BuildClient()
+			if err != nil {
+				log.Fatalln(err)
+			}
 
 			response, err := client.Verify(accessToken)
 			if err != nil {
@@ -62,12 +79,19 @@ func buildVerifyCmd(client *internal.Client) *cobra.Command {
 	}
 }
 
-func buildListTeamCmd(client *internal.Client) *cobra.Command {
+func buildListTeamCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:  "team",
-		Args: cobra.ExactArgs(1),
+		Use:   "list",
+		Short: "List a team's members",
+		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			teamID := args[0]
+			app := cmd.Context().Value("app").(*AppContext)
+
+			client, err := app.BuildClient()
+			if err != nil {
+				log.Fatalln(err)
+			}
 
 			team, err := client.Team(teamID)
 			if err != nil {
