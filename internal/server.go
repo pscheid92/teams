@@ -2,20 +2,20 @@ package internal
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 	"net/http"
 	"time"
 )
 
 type Server struct {
-	*gin.Engine
+	*echo.Echo
 	repository DataRepository
 	jwt        *JwtHelper
 }
 
 func NewServer(jwt *JwtHelper, repository DataRepository) *Server {
 	return &Server{
-		Engine:     gin.New(),
+		Echo:       echo.New(),
 		repository: repository,
 		jwt:        jwt,
 	}
@@ -28,87 +28,80 @@ func (s *Server) InitRoutes() {
 	s.GET("teams/:id", s.buildTeamHandler())
 }
 
-func (s *Server) buildHealthHandler() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.String(http.StatusOK, "ok")
+func (s *Server) buildHealthHandler() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		return c.String(http.StatusOK, "ok")
 	}
 }
 
-func (s *Server) buildLoginHandler() gin.HandlerFunc {
-	return func(c *gin.Context) {
+func (s *Server) buildLoginHandler() echo.HandlerFunc {
+	return func(c echo.Context) error {
 		request := LoginRequest{}
-		if err := c.BindJSON(&request); err != nil {
+
+		if err := c.Bind(&request); err != nil {
 			err = fmt.Errorf("login: %w", err)
 			c.Error(err)
-			c.Status(http.StatusBadRequest)
-			return
+			return c.NoContent(http.StatusBadRequest)
 		}
 
 		key, found := s.repository.GetUserPublicKey(request.Username)
 		if !found {
-			c.Status(http.StatusNotFound)
-			return
+			return c.NoContent(http.StatusNotFound)
 		}
 
 		isValid, err := VerifyChallenge(request.Challenge, request.Username, request.Timestamp, key)
 		if err != nil || !isValid {
-			c.Status(http.StatusUnauthorized)
-			return
+			return c.NoContent(http.StatusUnauthorized)
 		}
 
 		accessToken, err := s.jwt.Create(request.Username, time.Now())
 		if err != nil {
 			err = fmt.Errorf("login: %w", err)
 			c.Error(err)
-			c.Status(http.StatusInternalServerError)
-			return
+			return c.NoContent(http.StatusInternalServerError)
 		}
 
 		response := LoginResponse{AccessToken: accessToken}
-		c.JSON(http.StatusOK, response)
+		return c.JSON(http.StatusOK, response)
 	}
 }
 
-func (s *Server) buildVerifyHandler() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		accessToken := c.Query("access_token")
+func (s *Server) buildVerifyHandler() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		accessToken := c.QueryParam("access_token")
 		if accessToken == "" {
-			c.Status(http.StatusBadRequest)
-			return
+			return c.NoContent(http.StatusBadRequest)
 		}
 
 		claims, err := s.jwt.Validate(accessToken)
 		if err != nil {
 			err = fmt.Errorf("verify: %w", err)
 			c.Error(err)
-			c.Status(http.StatusBadRequest)
-			return
+			return c.NoContent(http.StatusBadRequest)
 		}
 
 		username := claims.Subject
 		found := s.repository.UserExists(username)
 		if !found {
-			c.Status(http.StatusNotFound)
-			return
+			return c.NoContent(http.StatusNotFound)
 		}
 
 		response := VerifyResponse{Username: username}
-		c.JSON(http.StatusOK, response)
+		return c.JSON(http.StatusOK, response)
 	}
 }
 
-func (s *Server) buildTeamHandler() gin.HandlerFunc {
-	return func(c *gin.Context) {
+func (s *Server) buildTeamHandler() echo.HandlerFunc {
+	return func(c echo.Context) error {
 		teamID := c.Param("id")
 
 		members, found := s.repository.GetTeamMembers(teamID)
 		if !found {
-			c.Status(http.StatusNotFound)
-			return
+			return c.NoContent(http.StatusNotFound)
 		}
 
 		response := TeamResponse{TeamID: teamID, Members: members}
-		c.JSON(http.StatusOK, response)
+		return c.JSON(http.StatusOK, response)
 	}
 }
 

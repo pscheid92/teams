@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/pscheid/teams/internal"
 	"github.com/spf13/viper"
 	"log"
@@ -9,8 +8,6 @@ import (
 )
 
 func main() {
-	gin.SetMode(gin.ReleaseMode)
-
 	config := loadConfig()
 
 	monitor := buildDataMonitor(config)
@@ -20,12 +17,10 @@ func main() {
 	repository := internal.NewYAMLFileDataRepository(monitor)
 
 	server := internal.NewServer(jwt, repository)
-	server.Use(gin.Recovery())
-	server.Use(gin.Logger())
 	server.InitRoutes()
 
-	if err := server.Run(); err != nil {
-		log.Fatal(err)
+	if err := server.Start(":8080"); err != nil {
+		log.Fatalln(err)
 	}
 }
 
