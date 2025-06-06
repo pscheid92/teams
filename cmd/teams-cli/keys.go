@@ -25,7 +25,7 @@ func buildKeysCmd() *cobra.Command {
 func buildGenerateKeyCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "generate",
-		Short: "Generate a new public and private key pais",
+		Short: "Generate a new public and private key pair.",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			username := args[0]
