@@ -50,7 +50,7 @@ func buildGenerateKeyCmd() *cobra.Command {
 func buildListKeysCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
-		Short: "List you configured users",
+		Short: "List your configured users.",
 		Run: func(cmd *cobra.Command, args []string) {
 			app := cmd.Context().Value("app").(*AppContext)
 			keysSet, err := app.BuildKeysSet()
